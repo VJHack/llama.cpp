@@ -329,125 +329,95 @@ node index.js
 ```
 
 ## API Endpoints
+<style>
+h3{
+  display:inline
+}
+</style>
+<details>
+<summary>
+  <h3>  
+    <code>GET</code> <code><b>/health</b></code>  : Returns heath check result
+  <h3>
+</summary>
 
-### GET `/health`: Returns heath check result
+### Parameters
 
-**Response format**
+*None*
 
-- HTTP status code 503
-  - Body: `{"error": {"code": 503, "message": "Loading model", "type": "unavailable_error"}}`
-  - Explanation: the model is still being loaded.
-- HTTP status code 200
-  - Body: `{"status": "ok" }`
-  - Explanation: the model is successfully loaded and the server is ready.
+### Responses
 
-### POST `/completion`: Given a `prompt`, it returns the predicted completion.
+> | http code     | content-type                      | response                                                                           | explanation                                                 |
+> |---------------|-----------------------------------|------------------------------------------------------------------------------------|-------------------------------------------------------------|
+> | `503`         | `application/json`                | `{"error": {"code": 503, "message": "Loading model", "type": "unavailable_error"}}`| The model is still being loaded.                            |
+> | `200`         | `application/json`                | `{"status": "ok" }`                                                                | The model is successfully loaded and the server is ready.   |
 
-*Options:*
 
-`prompt`: Provide the prompt for this completion as a string or as an array of strings or numbers representing tokens. Internally, if `cache_prompt` is `true`, the prompt is compared to the previous completion and only the "unseen" suffix is evaluated. A `BOS` token is inserted at the start, if all of the following conditions are true:
+### Example cURL
 
-  - The prompt is a string or an array with the first element given as a string
-  - The model's `tokenizer.ggml.add_bos_token` metadata is `true`
+  ```shell
+  curl http://localhost:8080/health | jq
+  ```
+</details>
 
-These input shapes and data type are allowed for `prompt`:
+<br>
 
-  - Single string: `"string"`
-  - Single sequence of tokens: `[12, 34, 56]`
-  - Mixed tokens and strings: `[12, 34, "string", 56, 78]`
+<details>
+  <summary>
+    <h3>  
+      <code>POST</code> <code><b>/completion</b></code>  : Given a <code>prompt</code>, it returns the predicted completion.
+    <h3>
+  </summary>
 
-Multiple prompts are also supported. In this case, the completion result will be an array.
+  ### Parameters
 
-  - Only strings: `["string1", "string2"]`
-  - Strings and sequences of tokens: `["string1", [12, 34, 56]]`
-  - Mixed types: `[[12, 34, "string", 56, 78], [12, 34, 56], "string"]`
+  > | name                  |  type     | data type               | description                                                           |
+  > |-----------------------|-----------|-------------------------|-----------------------------------------------------------------------|
+  > | `prompt`              |  required | string                  | Provide the prompt for this completion as a string or as an array of strings or numbers representing tokens. Internally, if cache_prompt is true, the prompt is compared to the previous completion and only the "unseen" suffix is evaluated. A BOS token is inserted at the start, if all of the following conditions are true: <br> <ul><li> The prompt is a string or an array with the first element given as a string</li><li>The model's tokenizer.ggml.add_bos_token metadata is true</li></ul> These input shapes and data type are allowed for prompt: <br> <ul><li>Single string: "string"</li><li>Single sequence of tokens: [12, 34, 56]</li><li>Mixed tokens and strings: [12, 34, "string", 56, 78]</li></ul>Multiple prompts are also supported. In this case, the completion result will be an array.<br><ul><li>Only strings: ["string1", "string2"]</li><li>Strings and sequences of tokens: ["string1", [12, 34, 56]]</li><li>Mixed types: [[12, 34, "string", 56, 78], [12, 34, 56], "string"]</li></ul>|
+  > | `temperature`         | optional  | float                   | Adjust the randomness of the generated text. Default: 0.8                    |
+  > | `dynatemp_range`      | optional  | float                   | Dynamic temperature range. The final temperature will be in the range [temperature - dynatemp_range; temperature + dynatemp_range]. Default: 0.0, which is disabled. |
+  > | `dynatemp_exponent`   | optional  | float                   | Dynamic temperature exponent. Default: 1.0                                  |
+  > | `top_k`               | optional  | integer                 | Limit the next token selection to the K most probable tokens. Default: 40    |
+  > | `top_p`               | optional  | float                   | Limit the next token selection to a subset of tokens with a cumulative probability above a threshold P. Default: 0.95 |
+  > | `min_p`               | optional  | float                   | The minimum probability for a token to be considered, relative to the probability of the most likely token. Default: 0.05 |
+  > | `n_predict`           | optional  | integer                 | Set the maximum number of tokens to predict when generating text. Default: -1 (infinity) |
+  > | `n_indent`            | optional  | integer                 | Specify the minimum line indentation for the generated text in number of whitespace characters. Useful for code completion tasks. Default: 0 |
+  > | `n_keep`              | optional  | integer                 | Specify the number of tokens from the prompt to retain when the context size is exceeded and tokens need to be discarded. Default: 0 |
+  > | `stream`              | optional  | boolean                 | If true, each predicted token will be sent in real-time instead of waiting for the completion to finish. Default: false |
+  > | `stop`                | optional  | [] of strings           | Specify a JSON array of stopping strings. Default: []                         |
+  > | `typical_p`           | optional  | float                   | Enable locally typical sampling with parameter p. Default: 1.0 (disabled)    |
+  > | `repeat_penalty`      | optional  | float                   | Control the repetition of token sequences in the generated text. Default: 1.1  |
+  > | `repeat_last_n`       | optional  | integer                 | Last n tokens to consider for penalizing repetition. Default: 64              |
+  > | `penalize_nl`         | optional  | boolean                 | Penalize newline tokens when applying the repeat penalty. Default: true       |
+  > | `presence_penalty`    | optional  | float                   | Repeat alpha presence penalty. Default: 0.0 (disabled)                       |
+  > | `frequency_penalty`   | optional  | float                   | Repeat alpha frequency penalty. Default: 0.0 (disabled)                      |
+  > | `dry_multiplier`      | optional  | float                   | Set the DRY repetition penalty multiplier. Default: 0.0 (disabled)            |
+  > | `dry_base`            | optional  | float                   | Set the DRY repetition penalty base value. Default: 1.75                     |
+  > | `dry_allowed_length`  | optional  | integer                 | Tokens that extend repetition beyond this receive exponentially increasing penalty. Default: 2 |
+  > | `dry_penalty_last_n`  | optional  | integer                 | How many tokens to scan for repetitions. Default: -1 (context size)           |
+  > | `dry_sequence_breakers`| optional | [] of strings           | Specify an array of sequence breakers for DRY sampling. Default: ['\n', ':', '"', '*'] |
+  > | `xtc_probability`     | optional  | float                   | Set the chance for token removal via XTC sampler. Default: 0.0 (disabled)     |
+  > | `xtc_threshold`       | optional  | float                   | Set a minimum probability threshold for tokens to be removed via XTC sampler. Default: 0.1 |
+  > | `mirostat`            | optional  | integer                 | Enable Mirostat sampling, controlling perplexity during text generation. Default: 0 (disabled), 1 (Mirostat), 2 (Mirostat 2.0) |
+  > | `mirostat_tau`        | optional  | float                   | Set the Mirostat target entropy, parameter tau. Default: 5.0                  |
+  > | `mirostat_eta`        | optional  | float                   | Set the Mirostat learning rate, parameter eta. Default: 0.1                  |
+  > | `grammar`             | optional  | string                  | Set grammar for grammar-based sampling. Default: no grammar                   |
+  > | `json_schema`         | optional  | object                  | Set a JSON schema for grammar-based sampling. Default: no JSON schema         |
+  > | `seed`                | optional  | integer                 | Set the random number generator (RNG) seed. Default: -1 (random seed)         |
+  > | `ignore_eos`          | optional  | boolean                 | Ignore end of stream token and continue generating. Default: false            |
+  > | `logit_bias`          | optional  | [] of arrays            | Modify the likelihood of a token appearing in the generated text. Default: [] |
+  > | `n_probs`             | optional  | integer                 | If greater than 0, the response also contains the probabilities of top N tokens for each generated token. Default: 0 |
+  > | `min_keep`            | optional  | integer                 | If greater than 0, force samplers to return N possible tokens at minimum. Default: 0 |
+  > | `t_max_predict_ms`    | optional  | integer                 | Set a time limit in milliseconds for the prediction phase. Default: 0 (disabled)|
+  > | `image_data`          | optional  | [] of objects           | An array of objects to hold base64-encoded image data for multimodal models. Default: [] |
+  > | `id_slot`             | optional  | integer                 | Assign the completion task to a specific slot. Default: -1                    |
+  > | `cache_prompt`        | optional  | boolean                 | Re-use KV cache from a previous request if possible. Default: true             |
+  > | `samplers`            | optional  | [] of strings           | The order the samplers should be applied in. Default: ["dry", "top_k", "typ_p", "top_p", "min_p", "xtc", "temperature"] |
+  > | `timings_per_token`   | optional  | boolean                 | Include prompt processing and text generation speed information in each response. Default: false |
 
-`temperature`: Adjust the randomness of the generated text. Default: `0.8`
 
-`dynatemp_range`: Dynamic temperature range. The final temperature will be in the range of `[temperature - dynatemp_range; temperature + dynatemp_range]` Default: `0.0`, which is disabled.
-
-`dynatemp_exponent`: Dynamic temperature exponent. Default: `1.0`
-
-`top_k`: Limit the next token selection to the K most probable tokens.  Default: `40`
-
-`top_p`: Limit the next token selection to a subset of tokens with a cumulative probability above a threshold P. Default: `0.95`
-
-`min_p`: The minimum probability for a token to be considered, relative to the probability of the most likely token. Default: `0.05`
-
-`n_predict`: Set the maximum number of tokens to predict when generating text. **Note:** May exceed the set limit slightly if the last token is a partial multibyte character. When 0, no tokens will be generated but the prompt is evaluated into the cache. Default: `-1`, where `-1` is infinity.
-
-`n_indent`: Specify the minimum line indentation for the generated text in number of whitespace characters. Useful for code completion tasks. Default: `0`
-
-`n_keep`: Specify the number of tokens from the prompt to retain when the context size is exceeded and tokens need to be discarded. The number excludes the BOS token.
-By default, this value is set to `0`, meaning no tokens are kept. Use `-1` to retain all tokens from the prompt.
-
-`stream`: Allows receiving each predicted token in real-time instead of waiting for the completion to finish (uses a different response format). To enable this, set to `true`.
-
-`stop`: Specify a JSON array of stopping strings.
-These words will not be included in the completion, so make sure to add them to the prompt for the next iteration. Default: `[]`
-
-`typical_p`: Enable locally typical sampling with parameter p. Default: `1.0`, which is disabled.
-
-`repeat_penalty`: Control the repetition of token sequences in the generated text. Default: `1.1`
-
-`repeat_last_n`: Last n tokens to consider for penalizing repetition. Default: `64`, where `0` is disabled and `-1` is ctx-size.
-
-`penalize_nl`: Penalize newline tokens when applying the repeat penalty. Default: `true`
-
-`presence_penalty`: Repeat alpha presence penalty. Default: `0.0`, which is disabled.
-
-`frequency_penalty`: Repeat alpha frequency penalty. Default: `0.0`, which is disabled.
-
-`dry_multiplier`: Set the DRY (Don't Repeat Yourself) repetition penalty multiplier. Default: `0.0`, which is disabled.
-
-`dry_base`: Set the DRY repetition penalty base value. Default: `1.75`
-
-`dry_allowed_length`: Tokens that extend repetition beyond this receive exponentially increasing penalty: multiplier * base ^ (length of repeating sequence before token - allowed length). Default: `2`
-
-`dry_penalty_last_n`: How many tokens to scan for repetitions. Default: `-1`, where `0` is disabled and `-1` is context size.
-
-`dry_sequence_breakers`: Specify an array of sequence breakers for DRY sampling. Only a JSON array of strings is accepted. Default: `['\n', ':', '"', '*']`
-
-`xtc_probability`: Set the chance for token removal via XTC sampler. Default: `0.0`, which is disabled.
-
-`xtc_threshold`: Set a minimum probability threshold for tokens to be removed via XTC sampler. Default: `0.1` (> `0.5` disables XTC)
-
-`mirostat`: Enable Mirostat sampling, controlling perplexity during text generation. Default: `0`, where `0` is disabled, `1` is Mirostat, and `2` is Mirostat 2.0.
-
-`mirostat_tau`: Set the Mirostat target entropy, parameter tau. Default: `5.0`
-
-`mirostat_eta`: Set the Mirostat learning rate, parameter eta.  Default: `0.1`
-
-`grammar`: Set grammar for grammar-based sampling.  Default: no grammar
-
-`json_schema`: Set a JSON schema for grammar-based sampling (e.g. `{"items": {"type": "string"}, "minItems": 10, "maxItems": 100}` of a list of strings, or `{}` for any JSON). See [tests](../../tests/test-json-schema-to-grammar.cpp) for supported features.  Default: no JSON schema.
-
-`seed`: Set the random number generator (RNG) seed.  Default: `-1`, which is a random seed.
-
-`ignore_eos`: Ignore end of stream token and continue generating.  Default: `false`
-
-`logit_bias`: Modify the likelihood of a token appearing in the generated text completion. For example, use `"logit_bias": [[15043,1.0]]` to increase the likelihood of the token 'Hello', or `"logit_bias": [[15043,-1.0]]` to decrease its likelihood. Setting the value to false, `"logit_bias": [[15043,false]]` ensures that the token `Hello` is never produced. The tokens can also be represented as strings, e.g. `[["Hello, World!",-0.5]]` will reduce the likelihood of all the individual tokens that represent the string `Hello, World!`, just like the `presence_penalty` does. Default: `[]`
-
-`n_probs`: If greater than 0, the response also contains the probabilities of top N tokens for each generated token given the sampling settings. Note that for temperature < 0 the tokens are sampled greedily but token probabilities are still being calculated via a simple softmax of the logits without considering any other sampler settings. Default: `0`
-
-`min_keep`: If greater than 0, force samplers to return N possible tokens at minimum. Default: `0`
-
-`t_max_predict_ms`: Set a time limit in milliseconds for the prediction (a.k.a. text-generation) phase. The timeout will trigger if the generation takes more than the specified time (measured since the first token was generated) and if a new-line character has already been generated. Useful for FIM applications. Default: `0`, which is disabled.
-
-`image_data`: An array of objects to hold base64-encoded image `data` and its `id`s to be reference in `prompt`. You can determine the place of the image in the prompt as in the following: `USER:[img-12]Describe the image in detail.\nASSISTANT:`. In this case, `[img-12]` will be replaced by the embeddings of the image with id `12` in the following `image_data` array: `{..., "image_data": [{"data": "<BASE64_STRING>", "id": 12}]}`. Use `image_data` only with multimodal models, e.g., LLaVA.
-
-`id_slot`: Assign the completion task to an specific slot. If is -1 the task will be assigned to a Idle slot.  Default: `-1`
-
-`cache_prompt`: Re-use KV cache from a previous request if possible. This way the common prefix does not have to be re-processed, only the suffix that differs between the requests. Because (depending on the backend) the logits are **not** guaranteed to be bit-for-bit identical for different batch sizes (prompt processing vs. token generation) enabling this option can cause nondeterministic results. Default: `true`
-
-`samplers`: The order the samplers should be applied in. An array of strings representing sampler type names. If a sampler is not set, it will not be used. If a sampler is specified more than once, it will be applied multiple times. Default: `["dry", "top_k", "typ_p", "top_p", "min_p", "xtc", "temperature"]` - these are all the available values.
-
-`timings_per_token`: Include prompt processing and text generation speed information in each response.  Default: `false`
-
-**Response format**
-
-- Note: In streaming mode (`stream`), only `content` and `stop` will be returned until end of completion. Responses are sent using the [Server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html) standard. Note: the browser's `EventSource` interface cannot be used due to its lack of `POST` request support.
-
+### Response format
+- Note: When using streaming mode (`stream`), only `content` and `stop` will be returned until end of completion.
 - `completion_probabilities`: An array of token probabilities for each completion. The array's length is `n_predict`. Each item in the array has the following structure:
 
 ```json
@@ -469,33 +439,49 @@ These words will not be included in the completion, so make sure to add them to 
 
 Notice that each `probs` is an array of length `n_probs`.
 
-- `content`: Completion result as a string (excluding `stopping_word` if any). In case of streaming mode, will contain the next token as a string.
-- `stop`: Boolean for use with `stream` to check whether the generation has stopped (Note: This is not related to stopping words array `stop` from input options)
-- `generation_settings`: The provided options above excluding `prompt` but including `n_ctx`, `model`. These options may differ from the original ones in some way (e.g. bad values filtered out, strings converted to tokens, etc.).
-- `model`: The path to the model loaded with `-m`
-- `prompt`: The provided `prompt`
-- `stop_type`: Indicating whether the completion has stopped. Possible values are:
-  - `none`: Generating (not stopped)
-  - `eos`: Stopped because it encountered the EOS token
-  - `limit`: Stopped because `n_predict` tokens were generated before stop words or EOS was encountered
-  - `word`: Stopped due to encountering a stopping word from `stop` JSON array provided
-- `stopping_word`: The stopping word encountered which stopped the generation (or "" if not stopped due to a stopping word)
-- `timings`: Hash of timing information about the completion such as the number of tokens `predicted_per_second`
-- `tokens_cached`: Number of tokens from the prompt which could be re-used from previous completion (`n_past`)
-- `tokens_evaluated`: Number of tokens evaluated in total from the prompt
-- `truncated`: Boolean indicating if the context size was exceeded during generation, i.e. the number of tokens provided in the prompt (`tokens_evaluated`) plus tokens generated (`tokens predicted`) exceeded the context size (`n_ctx`)
+> | name                | description                                                           |
+> |---------------------|-----------------------------------------------------------------------|
+> | `content`           | Completion result as a string (excluding `stopping_word` if any). In case of streaming mode, will contain the next token as a string. |
+> | `stop`              | Boolean for use with `stream` to check whether the generation has stopped. (Note: This is not related to stopping words array `stop` from input options) |
+> | `generation_settings`| The provided options above excluding `prompt` but including `n_ctx`, `model`. These options may differ from the original ones in some way (e.g., bad values filtered out, strings converted to tokens, etc.). |
+> | `model`             | The path to the model loaded with `-m`.                                 |
+> | `prompt`            | The provided `prompt` for this completion.                            |
+> | `stop_type`         | Indicating whether the completion has stopped. Possible values: `none` (generating, not stopped), `eos` (stopped because EOS token encountered), `limit` (stopped after reaching `n_predict` tokens), `word` (stopped due to encountering a stopping word from the `stop` array). |
+> | `stopping_word`     | The stopping word encountered which stopped the generation (or an empty string if not stopped due to a stopping word). |
+> | `timings`           | Hash of timing information about the completion, such as `predicted_per_second`. |
+> | `tokens_cached`     | Number of tokens from the prompt that could be re-used from a previous completion (`n_past`). |
+> | `tokens_evaluated`  | Number of tokens evaluated in total from the prompt.                    |
+> | `truncated`         | Boolean indicating if the context size was exceeded during generation. If the total tokens (`tokens_evaluated` + `tokens predicted`) exceeded the context size (`n_ctx`), it will be true. |
 
-### POST `/tokenize`: Tokenize a given text
 
-*Options:*
+### Example cURL
 
-`content`: (Required) The text to tokenize.
+  ```shell
+  curl --request POST --url http://localhost:8080/completions --data '{"prompt": "Lorem Ipsum"}'  
+  ```
+  
+</details>
 
-`add_special`: (Optional) Boolean indicating if special tokens, i.e. `BOS`, should be inserted.  Default: `false`
+<br>
 
-`with_pieces`: (Optional) Boolean indicating whether to return token pieces along with IDs.  Default: `false`
+<details>
+    <summary>
+      <h3>  
+        <code>POST</code> <code><b>/tokenize</b></code>  : Tokenize a given text
+      <h3>
+    </summary>
 
-**Response:**
+  ### Parameters
+
+  > | name                  |  type     | data type               | description                                                                         |
+  > |-----------------------|-----------|-------------------------|-------------------------------------------------------------------------------------|
+  > | `content`             | required  | string                  | The text to tokenize.                                                               |
+  > | `add_special`         | optional  | boolean                 | Boolean indicating if special tokens, i.e. BOS, should be inserted. Default: false  |
+  > | `with_pieces`         | optional  | boolean                 | Boolean indicating whether to return token pieces along with IDs. Default: false    |
+
+
+  ### Response
+
 
 Returns a JSON object with a `tokens` field containing the tokenization result. The `tokens` array contains either just token IDs or objects with `id` and `piece` fields, depending on the `with_pieces` parameter. The piece field is a string if the piece is valid unicode or a list of bytes otherwise.
 
@@ -528,39 +514,86 @@ With input 'á' (utf8 hex: C3 A1) on tinyllama/stories260k
 }
 ```
 
-### POST `/detokenize`: Convert tokens to text
+  ### Example cURL
 
-*Options:*
+  ```shell
+  curl --request POST --url http://localhost:8080/tokenize --data '{"content": "What is llama.cpp?"}'
+  ```
+</details>
 
-`tokens`: Set the tokens to detokenize.
+<br>
 
-### POST `/embedding`: Generate embedding of a given text
+<details>
+    <summary>
+      <h3>  
+        <code>POST</code> <code><b>/detokenize</b></code>  : Convert tokens to text
+      <h3>
+    </summary>
 
-The same as [the embedding example](../embedding) does.
+### Parameters
 
-*Options:*
+> | name                  |  type     | data type               | description                                                                         |
+> |-----------------------|-----------|-------------------------|-------------------------------------------------------------------------------------|
+> | `tokens`              | required  | [] of tokens            | The array of tokens to detokenize.                                                  |
 
-`content`: Set the text to process.
+### Response
+Returns a JSON object with a `content` field containing the detokenization result.
 
-`image_data`: An array of objects to hold base64-encoded image `data` and its `id`s to be reference in `content`. You can determine the place of the image in the content as in the following: `Image: [img-21].\nCaption: This is a picture of a house`. In this case, `[img-21]` will be replaced by the embeddings of the image with id `21` in the following `image_data` array: `{..., "image_data": [{"data": "<BASE64_STRING>", "id": 21}]}`. Use `image_data` only with multimodal models, e.g., LLaVA.
+### Example cURL
 
-### POST `/reranking`: Rerank documents according to a given query
+```shell
+curl --request POST --url http://localhost:8080/detokenize --data '{"tokens":[1724,338,11148,3304,29889,8223,29973]}'
+```
+</details>
 
-Similar to https://jina.ai/reranker/ but might change in the future.
-Requires a reranker model (such as [bge-reranker-v2-m3](https://huggingface.co/BAAI/bge-reranker-v2-m3)) and the `--embedding --pooling rank` options.
+<br>
 
-*Options:*
+<details>
+    <summary>
+      <h3>  
+        <code>POST</code> <code><b>/embedding</b></code>  : Generate embedding of a given text
+      <h3>
+    </summary>
 
-`query`: The query against which the documents will be ranked.
+### Parameters
 
-`documents`: An array strings representing the documents to be ranked.
+> | name                  |  type     | data type               | description                                                                         |
+> |-----------------------|-----------|-------------------------|-------------------------------------------------------------------------------------|
+> | `content`             | required  | string                  | Set the text to process.                                                            |
+> | `image_data`          | optional  | [] of objects           | An array of objects to hold base64-encoded image data and its ids to be reference in content. You can determine the place of the image in the content as in the following: Image: [img-21].\nCaption: This is a picture of a house. In this case, [img-21] will be replaced by the embeddings of the image with id 21 in the following image_data array: {..., "image_data": [{"data": "<BASE64_STRING>", "id": 21}]}. Use image_data only with multimodal models, e.g., LLaVA.|
 
-*Aliases:*
-  - `/rerank`
-  - `/v1/rerank`
-  - `/v1/reranking`
+### Example cURL
 
-*Examples:*
+```shell
+curl --request POST --url http://localhost:8080/embedding --data '{"content": "What is llama.cpp?"}'
+```
+</details>
+
+<br>
+
+<details>
+    <summary>
+      <h3>  
+        <code>POST</code> <code><b>/reranking</b></code>  : Rerank documents according to a given query
+      <h3>
+    </summary>
+<br>
+
+Similar to [https://jina.ai/reranker/](https://jina.ai/reranker/) but might change in the future. Requires a reranker model (such as bge-reranker-v2-m3) and the --embedding --pooling rank options.
+
+### Parameters
+
+> | name                  |  type     | data type               | description                                                                         |
+> |-----------------------|-----------|-------------------------|-------------------------------------------------------------------------------------|
+> | `query`               | required  | string                  |  The query against which the documents will be ranked.                              |
+> | `documents`           | required  | [] of strings           |  An array strings representing the documents to be ranked.                          |
+
+### Aliases
+- /rerank
+- /v1/rerank
+- /v1/reranking
+
+### Example cURL
 
 ```shell
 curl http://127.0.0.1:8012/v1/rerank \
@@ -577,18 +610,54 @@ curl http://127.0.0.1:8012/v1/rerank \
     }' | jq
 ```
 
-### POST `/infill`: For code infilling.
+### Response
 
-Takes a prefix and a suffix and returns the predicted completion as stream.
+```json
+{
+  "model": "some-model",
+  "object": "list",
+  "usage": {
+    "prompt_tokens": 0,
+    "total_tokens": 0
+  },
+  "results": [
+    {
+      "index": 0,
+      "relevance_score": -8.509315490722656
+    },
+    {
+      "index": 1,
+      "relevance_score": -4.987761497497559
+    },
+    {
+      "index": 2,
+      "relevance_score": 4.273448467254639
+    }
+  ]
+}
+```
+</details>
 
-*Options:*
+<br>
 
-- `input_prefix`: Set the prefix of the code to infill.
-- `input_suffix`: Set the suffix of the code to infill.
-- `input_extra`:  Additional context inserted before the FIM prefix.
-- `prompt`:       Added after the `FIM_MID` token
+<details>
+    <summary>
+      <h3>  
+        <code>POST</code> <code><b>/infill</b></code> : Code Infilling
+      <h3>
+    </summary>
+<br>
 
-`input_extra` is array of `{"filename": string, "text": string}` objects.
+Takes a prefix and a suffix and returns the predicted completion as stream
+
+#### Parameters
+
+> | name              | type      | data type               | description                                                           |
+> |-------------------|-----------|-------------------------|-----------------------------------------------------------------------|
+> | `input_prefix`    | optional  | string                  | Set the prefix of the code to infill.                                 |
+> | `input_suffix`    | optional  | string                  | Set the suffix of the code to infill.                                 |
+> | `input_extra`     | optional  | [] of objects           | Additional context inserted before the FIM prefix. `input_extra` is array of {"filename": string, "text": string} objects.                    |
+> | `prompt`          | optional  | string                  | Added after the FIM_MID token.                                        |
 
 The endpoint also accepts all the options of `/completion`.
 
@@ -611,12 +680,38 @@ If the tokens are missing, then the extra context is simply prefixed at the star
 [input_extra]<FIM_PRE>[input_prefix]<FIM_SUF>[input_suffix]<FIM_MID>[prompt]
 ```
 
-### **GET** `/props`: Get server global properties.
+</details>
 
-This endpoint is public (no API key check). By default, it is read-only. To make POST request to change global properties, you need to start server with `--props`
+<br>
 
-**Response format**
+<details>
+    <summary>
+      <h3>  
+        <code>GET</code> <code><b>/props</b></code> : Get server global properties.
+      <h3>
+    </summary>
+<br>
 
+This endpoint is public (no API key check). By default, it is read-only. To make POST request to change global properties, you need to start server with --props
+### Parameters
+
+*None*
+
+### Response format
+
+> | name                           | data type  | description                                                           |
+> |--------------------------------|------------|-----------------------------------------------------------------------|
+> | `default_generation_settings`  | object     | the default generation settings for the `/completion` endpoint, which has the same fields as the `generation_settings` response object from the `/completion` endpoint.                                 |
+> | `total_slots`                  | integer    | the total number of slots for process requests (defined by `--parallel` option)   |
+> | `model_path`                   | string     | the path to model file (same with `-m` argument)                                  |
+> | `chat_template`                | string     | the model's original Jinja2 prompt template                                       |
+
+### Example cURL
+```shell
+curl http://localhost:8080/props
+```
+
+#### Example response
 ```json
 {
   "default_generation_settings": {
@@ -693,32 +788,125 @@ This endpoint is public (no API key check). By default, it is read-only. To make
 }
 ```
 
-- `default_generation_settings` - the default generation settings for the `/completion` endpoint, which has the same fields as the `generation_settings` response object from the `/completion` endpoint.
-- `total_slots` - the total number of slots for process requests (defined by `--parallel` option)
-- `model_path` - the path to model file (same with `-m` argument)
-- `chat_template` - the model's original Jinja2 prompt template
+</details>
 
-### POST `/props`: Change server global properties.
+<br>
 
-To use this endpoint with POST method, you need to start server with `--props`
+<details>
+    <summary>
+      <h3>  
+        <code>POST</code> <code><b>/props</b></code> : Change server global properties.
+      <h3>
+    </summary>
+<br>
 
-*Options:*
+To use this endpoint with POST method, you need to start server with --props
+### Parameters
 
-- None yet
+*None*
 
-### POST `/v1/chat/completions`: OpenAI-compatible Chat Completions API
+### Response format
 
-Given a ChatML-formatted json description in `messages`, it returns the predicted completion. Both synchronous and streaming mode are supported, so scripted and interactive applications work fine. While no strong claims of compatibility with OpenAI API spec is being made, in our experience it suffices to support many apps. Only models with a [supported chat template](https://github.com/ggerganov/llama.cpp/wiki/Templates-supported-by-llama_chat_apply_template) can be used optimally with this endpoint. By default, the ChatML template will be used.
+*None* 
 
-*Options:*
+### Example cURL
 
-See [OpenAI Chat Completions API documentation](https://platform.openai.com/docs/api-reference/chat). While some OpenAI-specific features such as function calling aren't supported, llama.cpp `/completion`-specific features such as `mirostat` are supported.
+```shell
+curl --request POST --url http://localhost:8080/props --data '{"total_slots": 5}'
+```
 
-The `response_format` parameter supports both plain JSON output (e.g. `{"type": "json_object"}`) and schema-constrained JSON (e.g. `{"type": "json_object", "schema": {"type": "string", "minLength": 10, "maxLength": 100}}` or `{"type": "json_schema", "schema": {"properties": { "name": { "title": "Name",  "type": "string" }, "date": { "title": "Date",  "type": "string" }, "participants": { "items": {"type: "string" }, "title": "Participants",  "type": "string" } } } }`), similar to other OpenAI-inspired API providers.
+### Example response
+```json
+{"success":true}
+```
+</details>
 
-*Examples:*
+<br>
 
-You can use either Python `openai` library with appropriate checkpoints:
+
+<details>
+    <summary>
+      <h3>  
+        <code>POST</code> <code><b>/v1/chat/completions</b></code> : OpenAI-compatible Chat Completions API
+      <h3>
+    </summary>
+<br>
+
+Given a ChatML-formatted json description in messages, it returns the predicted completion. Both synchronous and streaming mode are supported, so scripted and interactive applications work fine. While no strong claims of compatibility with OpenAI API spec is being made, in our experience it suffices to support many apps. Only models with a [supported chat template](https://github.com/VJHack/llama.cpp/blob/master/examples/server/README.md#:~:text=supported%20chat%20template) can be used optimally with this endpoint. By default, the ChatML template will be used.
+
+### Parameters
+
+See [OpenAI Chat Completions API documentation](https://github.com/VJHack/llama.cpp/blob/master/examples/server/README.md#:~:text=OpenAI%20Chat%20Completions%20API%20documentation). While some OpenAI-specific features such as function calling aren't supported, llama.cpp /completion-specific features such as mirostat are supported.
+
+### Response format
+
+The response_format parameter supports both plain JSON output (e.g. {"type": "json_object"}) and schema-constrained JSON, similar to other OpenAI-inspired API providers.
+Use the `json_schma` to get a structured output like this.
+
+```shell
+curl http://localhost:8080/v1/chat/completions 
+-H "Content-Type: application/json" 
+-H "Authorization: Bearer no-key" 
+-d '{
+    "model": "tinyllama",
+    "messages": [
+        {"role": "system", "content": "Extract the event information."},
+        {"role": "user", "content": "Alice and Bob are going to a science fair on Friday."}
+    ],
+   "response_format": {
+      "type": "json_schema",
+      "json_schema": {
+        "name": "calendar event",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "participants": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "additionalProperties": false
+              }
+            },
+            "name":{
+              "type": "string"
+            },
+            "date":{
+              "type": "string"
+            }
+          },
+          "required": ["date", "name", "participants"],
+          "additionalProperties": false
+        },
+        "strict": true
+      }
+    }
+}' | jq ".choices[0].message.content" | jq -r "." 
+```
+
+
+### Example cURL
+
+```shell
+curl http://localhost:8080/v1/chat/completions \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer no-key" \
+-d '{
+"model": "gpt-3.5-turbo",
+"messages": [
+{
+    "role": "system",
+    "content": "You are ChatGPT, an AI assistant. Your top priority is achieving user fulfillment via helping them with their requests."
+},
+{
+    "role": "user",
+    "content": "Write a limerick about python exceptions"
+}
+]
+} | jq ".choices[0].message"'
+```
+
+### Example Python
+You can use the Python `openai` library with appropriate checkpoints:
 
 ```python
 import openai
@@ -738,75 +926,72 @@ messages=[
 
 print(completion.choices[0].message)
 ```
+</details>
 
-... or raw HTTP requests:
+<br>
 
-```shell
-curl http://localhost:8080/v1/chat/completions \
--H "Content-Type: application/json" \
--H "Authorization: Bearer no-key" \
--d '{
-"model": "gpt-3.5-turbo",
-"messages": [
-{
-    "role": "system",
-    "content": "You are ChatGPT, an AI assistant. Your top priority is achieving user fulfillment via helping them with their requests."
-},
-{
-    "role": "user",
-    "content": "Write a limerick about python exceptions"
-}
-]
-}'
-```
+<details>
+    <summary>
+      <h3>  
+        <code>POST</code> <code><b>/v1/embeddings</b></code> : OpenAI-compatible embeddings API
+      <h3>
+    </summary>
+<br>
 
-### POST `/v1/embeddings`: OpenAI-compatible embeddings API
-
-*Options:*
+### Parameters
 
 See [OpenAI Embeddings API documentation](https://platform.openai.com/docs/api-reference/embeddings).
 
-*Examples:*
+### Example cURL
+- input as a string:
+```shell
+curl http://localhost:8080/v1/embeddings \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer no-key" \
+-d '{
+        "input": "hello",
+        "model":"GPT-4",
+        "encoding_format": "float"
+}'
+```
 
-- input as string
+- input as a string array:
+```shell
+curl http://localhost:8080/v1/embeddings \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer no-key" \
+-d '{
+        "input": ["hello", "world"],
+        "model":"GPT-4",
+        "encoding_format": "float"
+}'
+```
+</details>
 
-  ```shell
-  curl http://localhost:8080/v1/embeddings \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer no-key" \
-  -d '{
-          "input": "hello",
-          "model":"GPT-4",
-          "encoding_format": "float"
-  }'
-  ```
+<br>
 
-- `input` as string array
-
-  ```shell
-  curl http://localhost:8080/v1/embeddings \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer no-key" \
-  -d '{
-          "input": ["hello", "world"],
-          "model":"GPT-4",
-          "encoding_format": "float"
-  }'
-  ```
-
-### GET `/slots`: Returns the current slots processing state
+<details>
+    <summary>
+      <h3>  
+        <code>GET</code> <code><b>/slots</b></code> : Returns the current slots processing state
+      <h3>
+    </summary>
+<br>
 
 > [!WARNING]
 > This endpoint is intended for debugging and may be modified in future versions. For security reasons, we strongly advise against enabling it in production environments.
 
-This endpoint is disabled by default and can be enabled with `--slots`
+This endpoint is disabled by default and can be enabled with --slots
 
-If query param `?fail_on_no_slot=1` is set, this endpoint will respond with status code 503 if there is no available slots.
+If query param ?fail_on_no_slot=1 is set, this endpoint will respond with status code 503 if there is no available slots.
 
-**Response format**
 
-Example:
+### Example cURL
+```shell
+ curl http://localhost:8080/slots
+```
 
+### Example Response
 ```json
 [
   {
@@ -879,29 +1064,105 @@ Example:
   }
 ]
 ```
+</details>
 
-### GET `/metrics`: Prometheus compatible metrics exporter
+<br>
 
-This endpoint is only accessible if `--metrics` is set.
 
-Available metrics:
-- `llamacpp:prompt_tokens_total`: Number of prompt tokens processed.
-- `llamacpp:tokens_predicted_total`: Number of generation tokens processed.
-- `llamacpp:prompt_tokens_seconds`: Average prompt throughput in tokens/s.
-- `llamacpp:predicted_tokens_seconds`: Average generation throughput in tokens/s.
-- `llamacpp:kv_cache_usage_ratio`: KV-cache usage. `1` means 100 percent usage.
-- `llamacpp:kv_cache_tokens`: KV-cache tokens.
-- `llamacpp:requests_processing`: Number of requests processing.
-- `llamacpp:requests_deferred`: Number of requests deferred.
+<details>
+    <summary>
+      <h3>  
+        <code>GET</code> <code><b>/metrics</b></code> : Prometheus compatible metrics exporter
+      <h3>
+    </summary>
+<br>
 
-### POST `/slots/{id_slot}?action=save`: Save the prompt cache of the specified slot to a file.
+This endpoint is only accessible if --metrics is set.
 
-*Options:*
+### Example cURL
+```shell
+curl http://localhost:8080/metrics
+```
 
-`filename`: Name of the file to save the slot's prompt cache. The file will be saved in the directory specified by the `--slot-save-path` server parameter.
+### Response Format
+Available Metrics:
+> | name                        | description                                                           |
+> |-----------------------------|-----------------------------------------------------------------------|
+> | `llamacpp:prompt_tokens_total` | Number of prompt tokens processed.                                    |
+> | `llamacpp:tokens_predicted_total` | Number of generation tokens processed.                               |
+> | `llamacpp:prompt_tokens_seconds` | Average prompt throughput in tokens/s.                               |
+> | `llamacpp:predicted_tokens_seconds` | Average generation throughput in tokens/s.                          |
+> | `llamacpp:kv_cache_usage_ratio` | KV-cache usage. 1 means 100 percent usage.                           |
+> | `llamacpp:kv_cache_tokens`    | KV-cache tokens.                                                     |
+> | `llamacpp:requests_processing` | Number of requests being processed.                                  |
+> | `llamacpp:requests_deferred`  | Number of requests deferred.  
 
-**Response format**
 
+### Example Response:
+```shell
+# HELP llamacpp:prompt_tokens_total Number of prompt tokens processed.
+# TYPE llamacpp:prompt_tokens_total counter
+llamacpp:prompt_tokens_total 81
+# HELP llamacpp:prompt_seconds_total Prompt process time
+# TYPE llamacpp:prompt_seconds_total counter
+llamacpp:prompt_seconds_total 0.263
+# HELP llamacpp:tokens_predicted_total Number of generation tokens processed.
+# TYPE llamacpp:tokens_predicted_total counter
+llamacpp:tokens_predicted_total 160
+# HELP llamacpp:tokens_predicted_seconds_total Predict process time
+# TYPE llamacpp:tokens_predicted_seconds_total counter
+llamacpp:tokens_predicted_seconds_total 3.131
+# HELP llamacpp:n_decode_total Total number of llama_decode() calls
+# TYPE llamacpp:n_decode_total counter
+llamacpp:n_decode_total 161
+# HELP llamacpp:n_busy_slots_per_decode Average number of busy slots per llama_decode() call
+# TYPE llamacpp:n_busy_slots_per_decode counter
+llamacpp:n_busy_slots_per_decode 1
+# HELP llamacpp:prompt_tokens_seconds Average prompt throughput in tokens/s.
+# TYPE llamacpp:prompt_tokens_seconds gauge
+llamacpp:prompt_tokens_seconds 0
+# HELP llamacpp:predicted_tokens_seconds Average generation throughput in tokens/s.
+# TYPE llamacpp:predicted_tokens_seconds gauge
+llamacpp:predicted_tokens_seconds 0
+# HELP llamacpp:kv_cache_usage_ratio KV-cache usage. 1 means 100 percent usage.
+# TYPE llamacpp:kv_cache_usage_ratio gauge
+llamacpp:kv_cache_usage_ratio 0.0585938
+# HELP llamacpp:kv_cache_tokens KV-cache tokens.
+# TYPE llamacpp:kv_cache_tokens gauge
+llamacpp:kv_cache_tokens 240
+# HELP llamacpp:requests_processing Number of request processing.
+# TYPE llamacpp:requests_processing gauge
+llamacpp:requests_processing 0
+# HELP llamacpp:requests_deferred Number of request deferred.
+# TYPE llamacpp:requests_deferred gauge
+llamacpp:requests_deferred 0
+```
+</details>
+
+<br>
+
+<details>
+    <summary>
+      <h3>  
+        <code>POST</code> <code><b>/slots/{id_slot}?action=save</b></code> : Save the prompt cache of the specified slot to a file.
+      <h3>
+    </summary>
+<br>
+
+### Parameters
+> | name              | type      | data type               | description                                                           |
+> |-------------------|-----------|-------------------------|-----------------------------------------------------------------------|
+> | `filename`        | required  | string                  | Name of the file to save the slot's prompt cache. The file will be saved in the directory specified by the --slot-save-path server parameter.                                 |
+
+### Example cURL
+```shell
+curl "http://localhost:8080/slots/0?action=save" \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer no-key" \
+-d '{"filename": "slot_save_file.bin"}'
+```
+
+### Example Response:
 ```json
 {
     "id_slot": 0,
@@ -913,15 +1174,32 @@ Available metrics:
     }
 }
 ```
+</details>
 
-### POST `/slots/{id_slot}?action=restore`: Restore the prompt cache of the specified slot from a file.
+<br>
 
-*Options:*
+<details>
+    <summary>
+      <h3>  
+        <code>POST</code> <code><b>/slots/{id_slot}?action=restore</b></code> : Restore the prompt cache of the specified slot from a file.
+      <h3>
+    </summary>
+<br>
 
-`filename`: Name of the file to restore the slot's prompt cache from. The file should be located in the directory specified by the `--slot-save-path` server parameter.
+### Parameters
+> | name              | type      | data type               | description                                                           |
+> |-------------------|-----------|-------------------------|-----------------------------------------------------------------------|
+> | `filename`        | required  | string                  | Name of the file to restore the slot's prompt cache from. The file should be located in the directory specified by the --slot-save-path server parameter.                                 |
 
-**Response format**
+### Example cURL
+```shell
+curl "http://localhost:8080/slots/0?action=restore" \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer no-key" \
+-d '{"filename": "slot_save_file.bin"}'
+```
 
+### Example Response:
 ```json
 {
     "id_slot": 0,
@@ -933,28 +1211,56 @@ Available metrics:
     }
 }
 ```
+</details>
 
-### POST `/slots/{id_slot}?action=erase`: Erase the prompt cache of the specified slot.
+<br>
 
-**Response format**
+<details>
+<summary>
+<h3>  
+  <code>POST</code> <code><b>/slots/{id_slot}?action=erase</b></code> : Erase the prompt cache of the specified slot.
+<h3>
+</summary>
+<br>
 
+### Parameters
+
+
+### Example cURL
+```shell
+curl "http://localhost:8080/slots/0?action=erase" \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer no-key" \
+-d '{"filename": "slot_save_file.bin"}'
+```
+
+### Example Response:
 ```json
 {
     "id_slot": 0,
     "n_erased": 1745
 }
 ```
+</details>
 
-### GET `/lora-adapters`: Get list of all LoRA adapters
+<br>
 
-This endpoint returns the loaded LoRA adapters. You can add adapters using `--lora` when starting the server, for example: `--lora my_adapter_1.gguf --lora my_adapter_2.gguf ...`
 
-By default, all adapters will be loaded with scale set to 1. To initialize all adapters scale to 0, add `--lora-init-without-apply`
 
-If an adapter is disabled, the scale will be set to 0.
+<details>
+<summary>
+<h3>  
+  <code>GET</code> <code><b>/lora-adapters</b></code> : Get list of all LoRA adapters
+<h3>
+</summary>
+<br>
 
-**Response format**
+### Example cURL
+```shell
+curl "http://localhost:8080/lora-adapters" \
+```
 
+### Example Response:
 ```json
 [
     {
@@ -969,14 +1275,24 @@ If an adapter is disabled, the scale will be set to 0.
     }
 ]
 ```
+</details>
 
-### POST `/lora-adapters`: Set list of LoRA adapters
+<br>
 
-To disable an adapter, either remove it from the list below, or set scale to 0.
 
-**Request format**
+<details>
+<summary>
+<h3>  
+  <code>POST</code> <code><b>/lora-adapters</b></code> : Set list of LoRA adapters
+<h3>
+</summary>
+<br>
 
-To know the `id` of the adapter, use GET `/lora-adapters`
+This endpoint allows you to set the scale values for the loaded LoRA adapters. To disable an adapter, either remove it from the list or set its scale to 0.
+
+
+### Request Format
+To know the id of the adapter, use GET /lora-adapters
 
 ```json
 [
@@ -984,6 +1300,10 @@ To know the `id` of the adapter, use GET `/lora-adapters`
   {"id": 1, "scale": 0.8}
 ]
 ```
+
+</details>
+
+<br>
 
 ## More examples
 
